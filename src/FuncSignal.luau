@@ -1,16 +1,19 @@
 --!strict
 --!native
+--[=[
+    FuncSignal v1.1.0
+    Copyright ©️ 2026 classy-dragon
+    Licensed under the MIT License.
+    See LICENSE file in the github respiratory for more license information.
+--]=]
 local FuncSignal = {}
-
-export type FUNCRuntime = "NATIVE" | "DEFERRED" | "THREADED" | "PCALL" | "STEPPED"
-
-local RuntimeHeader = function(Method:FUNCRuntime,StepTIME:number?)
-	return if Method=="NATIVE" then (function(Macro,...) Macro(...) end)
-		elseif Method=="DEFERRED" then task.defer
-		elseif Method=="THREADED" then task.spawn
-		elseif Method=="STEPPED" then (function(Macro,...) Macro(...) task.wait(StepTIME) end)
-		else pcall	
-end
+export type FUNCRuntime = "NATIVE" | "DEFERRED" | "THREADED" | "PCALL"
+local FUNCRuntimeHeaders:{[FUNCRuntime]:(Macro:DispatcherMacro | any,...any)->any} = {
+	NATIVE = (function(Macro,...) Macro(...) return end),
+	DEFERRED = task.defer,
+	THREADED = task.spawn,
+	PCALL = pcall
+}
 
 export type DispatcherMacro=(...any)->()
 export type ProxyMacro={
@@ -30,12 +33,12 @@ export type Dispatcher = {
 	__FunctionBindings:{[DispatcherMacro]:Connection},
 	Disabled:boolean,
 	CustomFireARGSIntercept:(...any)->(...any)?, -- This Intercept Any (Fire) Method ARGS with an custom function (This SHOULD never yield and SHOULD return the input and to output!)
-	MethodFire:(self:Dispatcher,Runtime:FUNCRuntime,N:number,...any)->(),
+	MethodFire:(self:Dispatcher,Runtime:FUNCRuntime,...any)->(),
 	Fire:(self:Dispatcher,...any)->(), -- defaults to threaded 
 	FireHardware:(self:Dispatcher,...any)->(), -- Unsafe, Native, No Header, No Intercept.
 	FireNative:(self:Dispatcher,...any)->(),
 	FireDeferred:(self:Dispatcher,...any)->(),
-	FireThreaded:(self:Dispatcher,...any)->(),
+	FireThreaded:(self:Dispatcher,...any)->(), -- Hardware but stepped
 	__ProcessARGS:(self:Dispatcher,...any)->(...any),
 	SetCustomFireARGSIntercept:(self:Dispatcher,Interceptor:(...any)->(...any)) -> (),
 	FireStepped:(self:Dispatcher,TimeStep:number,...any)->(),
@@ -126,7 +129,7 @@ function ProxyMacroClass:Fire(...)
 	if #Payload<1 then
 		Payload=(self.Payload or {})
 	end
-	local Header = RuntimeHeader(self.Runtime)
+	local Header = FUNCRuntimeHeaders[self.Runtime]
 	for Macro in self.Macros do
 		Header(Macro,table.unpack(Payload,1,table.maxn(Payload)))
 	end
@@ -191,17 +194,27 @@ function DispatcherClass:__ProcessARGS(...)
 	return ARGS
 end
 
-function DispatcherClass:MethodFire(Method,N:number,...)
+function DispatcherClass:MethodFire(Method,...)
 	if self.Disabled then return end
-	local Header = RuntimeHeader(Method,N)
+	local Header = FUNCRuntimeHeaders[Method]
 	local Snapshot = table.clone(self.__FunctionBindings)
-	local ARGS = self:__ProcessARGS(...)
-	local ARGSC = table.maxn(ARGS)
-	for Macro in Snapshot do
-		if self.__FunctionBindings[Macro] then
-			Header(Macro,table.unpack(ARGS,1,ARGSC))
+	local FNB = self.__FunctionBindings
+	if self.CustomFireARGSIntercept then
+		local ARGS = self:__ProcessARGS(...)
+		local ARGSC = table.maxn(ARGS)
+		for Macro in Snapshot do
+			if FNB[Macro] then
+				Header(Macro,table.unpack(ARGS,1,ARGSC))
+			end
+		end
+	else
+		for Macro in Snapshot do
+			if FNB[Macro] then
+				Header(Macro,...)
+			end
 		end
 	end
+	
 	table.clear(Snapshot)
 end
 
@@ -212,8 +225,9 @@ end
 function DispatcherClass:FireHardware(...)
 	if self.Disabled then return end
 	local Snapshot = table.clone(self.__FunctionBindings)
+	local FNB = self.__FunctionBindings
 	for Macro in Snapshot do
-		if self.__FunctionBindings[Macro] then
+		if FNB[Macro] then
 			Macro(...)
 		end
 	end
@@ -221,19 +235,28 @@ function DispatcherClass:FireHardware(...)
 end
 
 function DispatcherClass:FireNative(...)
-	self:MethodFire("NATIVE",0,...)
+	self:MethodFire("NATIVE",...)
 end
 
 function DispatcherClass:FireDeferred(...)
-	self:MethodFire("DEFERRED",0,...)
+	self:MethodFire("DEFERRED",...)
 end
 
 function DispatcherClass:FireThreaded(...)
-	self:MethodFire("THREADED",0,...)
+	self:MethodFire("THREADED",...)
 end
 
 function DispatcherClass:FireStepped(StepTime,...)
-	self:MethodFire("STEPPED",(StepTime or 0),...)
+	if self.Disabled then return end
+	local Snapshot = table.clone(self.__FunctionBindings)
+	local FNB = self.__FunctionBindings
+	for Macro in Snapshot do
+		if FNB[Macro] then
+			Macro(...)
+			task.wait(StepTime)
+		end
+	end
+	table.clear(Snapshot)
 end
 
 function DispatcherClass:Once(Macro)
