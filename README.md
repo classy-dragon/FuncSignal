@@ -6,7 +6,7 @@
   <a href="https://luau-lang.org/"><img src="https://img.shields.io/badge/Made%20With%20Luau-6680b4" alt="Made With Luau"></a>
   <a href="https://github.com/classy-dragon/FuncSignal"><img src="https://img.shields.io/badge/Signal%2FEvent%20Handler-5657be" alt="Signal Handler"></a>
   <img src="https://img.shields.io/badge/Platform-Roblox-white" alt="Platform">
-  <img src="https://img.shields.io/badge/Version-1.0.0-blue" alt="Version">
+  <img src="https://img.shields.io/badge/Version-1.2.0-blue" alt="Version">
 </p>
 
 ### **FuncSignal** is a production-grade event system for Luau, benchmarked at **258x faster** than standard Roblox BindableEvents.
