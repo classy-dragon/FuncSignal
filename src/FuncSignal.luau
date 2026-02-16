@@ -32,6 +32,7 @@ export type Dispatcher = {
 	CustomFireARGSIntercept:(...any)->(...any)?, -- This Intercept Any (Fire) Method ARGS with an custom function (This SHOULD never yield and SHOULD return the input and to output!)
 	MethodFire:(self:Dispatcher,Runtime:FUNCRuntime,N:number,...any)->(),
 	Fire:(self:Dispatcher,...any)->(), -- defaults to threaded 
+	FireHardware:(self:Dispatcher,...any)->(), -- Unsafe, Native, No Header, No Intercept.
 	FireNative:(self:Dispatcher,...any)->(),
 	FireDeferred:(self:Dispatcher,...any)->(),
 	FireThreaded:(self:Dispatcher,...any)->(),
@@ -206,6 +207,17 @@ end
 
 function DispatcherClass:Fire(...)
 	self:FireThreaded(...)
+end
+
+function DispatcherClass:FireHardware(...)
+	if self.Disabled then return end
+	local Snapshot = table.clone(self.__FunctionBindings)
+	for Macro in Snapshot do
+		if self.__FunctionBindings[Macro] then
+			Macro(...)
+		end
+	end
+	table.clear(Snapshot)
 end
 
 function DispatcherClass:FireNative(...)
