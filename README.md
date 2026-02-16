@@ -8,7 +8,7 @@
 * 📊 [Performance Benchmarks](#-performance-benchmarks)
 * ⚠️ [Good Practices](#gp)
 * 🛠 [Usage Examples](#-usage-examples)
-* 📜 [Source Code](https://github.com/classy-dragon/FuncSignal/blob/main/FuncSignal.luau)
+* 📜 [Source Code](https://github.com/classy-dragon/FuncSignal/blob/main/src/FuncSignal.luau)
 ---
 
 ## ❓ Why FuncSignal:
