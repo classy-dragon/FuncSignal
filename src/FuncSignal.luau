@@ -18,6 +18,7 @@ export type ProxyMacro={
 	Payload:any,
 	ProxyConnection:Connection,
 	Runtime:FUNCRuntime,
+	SetRuntime:(self:ProxyMacro,NewRuntime:FUNCRuntime)->(),
 	Fire:(self:ProxyMacro,Payload:any?)->(),
 	PushMacro:(self:ProxyMacro,DispatcherMacro | {DispatcherMacro})->(),
 	PushONCEMacro:(self:ProxyMacro,DispatcherMacro | {DispatcherMacro})->(),
@@ -168,6 +169,10 @@ end
 
 function ProxyMacroClass:ClearMacros()
 	table.clear(self.Macros)
+end
+
+function ProxyMacroClass:SetRuntime(Runtime)
+	self.Runtime=Runtime
 end
 
 function ProxyMacroClass:Destroy()
