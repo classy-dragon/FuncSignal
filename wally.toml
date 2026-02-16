@@ -1,0 +1,12 @@
+[package]
+name = "classy-dragon/funcsignal"
+repository = "https://github.com/classy-dragon/FuncSignal/"
+authors = "classy-dragon"
+description = "A production-grade, native-optimized event system for Luau benchmarked at 258x faster than BindableEvents."
+version = "1.0.0"
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
+license = "MIT"
+
+[dependencies]
+# Zero Dependencies, FuncSignal is Light Weight Module, Everything is handled by it self!
