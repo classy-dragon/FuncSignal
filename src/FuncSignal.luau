@@ -1,7 +1,7 @@
 --!strict
 --!native
 --[[
-    FuncSignal v1.1.5 - Typed,Optimized,ETC
+    FuncSignal v1.1.6
     Copyright ©️ 2026 classy-dragon
     Licensed under the MIT License.
     See LICENSE file in the github respiratory for more license information.
@@ -134,11 +134,11 @@ end
 
 -- (Public) Connections Only --
 export type PublicDispatcher<T...> = {
-	Connect:(Macro:DispatcherMacro<T...>)->(Connection<T...>),
-	BatchConnect:(Macros:{DispatcherMacro<T...>})->({Connection<T...>}),
-	ProxyBatchConnect:(Macros:{DispatcherMacro<T...>},Runtime:FUNCRuntime)->(ProxyMacro<T...>),
-	Once:(Macro:DispatcherMacro<T...>)->(Connection<T...>),
-	Wait:()->(T...),
+	Connect:(self:PublicDispatcher<T...>,Macro:DispatcherMacro<T...>)->(Connection<T...>),
+	BatchConnect:(self:PublicDispatcher<T...>,Macros:{DispatcherMacro<T...>})->({Connection<T...>}),
+	ProxyBatchConnect:(self:PublicDispatcher<T...>,Macros:{DispatcherMacro<T...>},Runtime:FUNCRuntime)->(ProxyMacro<T...>),
+	Once:(self:PublicDispatcher<T...>,Macro:DispatcherMacro<T...>)->(Connection<T...>),
+	Wait:(self:PublicDispatcher<T...>)->(T...),
 }
 
 export type Dispatcher<T...> = {
@@ -184,11 +184,11 @@ function FuncSignal:CreateDispatcher<T...>(): Dispatcher<T...>
 	-- Public Init --
 	local TDispatcher = NewDispatcher :: Dispatcher<T...>
 	TDispatcher.PublicDispatcher = {
-		Connect=function(Macro) return TDispatcher:Connect(Macro) end,
-		BatchConnect=function(Macros) return TDispatcher:BatchConnect(Macros) end,
-		ProxyBatchConnect=function(Default,Runtime) return TDispatcher:ProxyBatchConnect(Default,Runtime) end,
-		Once=function(Macro) return TDispatcher:Once(Macro) end,
-		Wait=function() return TDispatcher:Wait() end
+		Connect=function(_,Macro) return TDispatcher:Connect(Macro) end,
+		BatchConnect=function(_,Macros) return TDispatcher:BatchConnect(Macros) end,
+		ProxyBatchConnect=function(_,Default,Runtime) return TDispatcher:ProxyBatchConnect(Default,Runtime) end,
+		Once=function(_,Macro) return TDispatcher:Once(Macro) end,
+		Wait=function(_) return TDispatcher:Wait() end
 	}
 	return NewDispatcher :: Dispatcher<T...>
 end
