@@ -107,7 +107,7 @@ end
 
 -- Dispatcher Class
 
--- LIGHT weight (DOD) Connection
+-- (LIGHT weight) Connection Class
 export type Connection<T...> = {
 	Disconnect:(self:Connection<T...>)->(),
 	__Macro:DispatcherMacro<T...>,
