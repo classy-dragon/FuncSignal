@@ -1,7 +1,7 @@
 --!strict
 --!native
 --[[
-    FuncSignal v1.1.5
+    FuncSignal v1.1.0
     Copyright ©️ 2026 classy-dragon
     Licensed under the MIT License.
     See LICENSE file in the github respiratory for more license information.
@@ -238,9 +238,8 @@ function DispatcherClass:MethodFire(Method,...)
 	if self.Disabled then return false end
 	local Header = FUNCRuntimeHeaders[Method]
 	local Snapshot = table.clone(self.__FunctionBindings)
-	local FNB = self.__FunctionBindings
 	for Macro in Snapshot do
-		if FNB[Macro] then
+		if self.__FunctionBindings[Macro] then
 			self:HandleFireIntercept(Macro,Header,...)
 		end
 	end
@@ -259,9 +258,8 @@ end
 function DispatcherClass:FireHardware(...)
 	if self.Disabled then return false end
 	local Snapshot = table.clone(self.__FunctionBindings)
-	local FNB = self.__FunctionBindings
 	for Macro in Snapshot do
-		if FNB[Macro] then
+		if self.__FunctionBindings[Macro] then
 			Macro(...)
 		end
 	end
@@ -284,9 +282,8 @@ end
 function DispatcherClass:FireStepped(StepTime,...)
 	if self.Disabled then return false end
 	local Snapshot = table.clone(self.__FunctionBindings)
-	local FNB = self.__FunctionBindings
 	for Macro in Snapshot do
-		if FNB[Macro] then
+		if self.__FunctionBindings[Macro] then
 			Macro(...)
 			task.wait(StepTime)
 		end
