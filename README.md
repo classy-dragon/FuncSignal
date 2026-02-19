@@ -99,6 +99,8 @@ FuncSignal's performance advantage scales with data complexity.
 <a name="gp"></a>
 ## ⚠️ Good Practices:
 * **Do NOT Yield in Native:** `FireNative` and `FireHardware` are synchronous. To maintain performance, avoid using `task.wait()` in these listeners.
+* **Never Innerconnect:** Never Connect the same dispatcher inside the same dispatcher, this can/will an memory leak, Connect → Connect (to the same dispatcher) makes an loop.
+* **Never Fire inside an connection:** This will cause an C-stack overflow. 
 * **Use Proxies for UI:** I recommend the `DEFERRED` runtime for UI updates to ensure they don't block critical game logic frames.
 * **Safe Cleanup:** Always use `:Destroy()` or `:ClearBindings()`, After your ready to destroy/stop using it, It ensures the Luau Garbage Collector can reclaim memory immediately.
 * **FireHardware:** Use this when every nanosecond counts. It bypasses the Interceptor pipeline and provides the rawest dispatch loop possible.
