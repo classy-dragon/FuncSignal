@@ -1,5 +1,6 @@
 --!strict
 --!native
+--!optimize 1
 --[[
     FuncSignal v1.1.5
     Copyright ©️ 2026 classy-dragon
@@ -10,45 +11,15 @@
 local FuncSignal = {}
 
 export type DispatcherMacro<T...> = (T...)->()
-export type FUNCRuntime = "NATIVE" | "DEFERRED" | "THREADED" | "PCALL" | "DEBUG"
-type HeaderFunc = (Macro:any,...any) -> any
+export type FUNCRuntime = "NATIVE" | "DEFERRED" | "THREADED" | "PCALL" | "DEBUG" | "HARDWARE"
+type HeaderFunc = (Macro:any,...any) -> ()
 local FUNCRuntimeHeaders:{[FUNCRuntime]:HeaderFunc} = {
 	NATIVE = (function(Macro,...) Macro(...) return end),
 	DEBUG = (function(Macro,...) print("FuncSignal-Macro-Debug: ",{...}) Macro(...) return end),
-	DEFERRED = task.defer,
-	THREADED = task.spawn,
-	PCALL = pcall,
+	DEFERRED = task.defer :: any,
+	THREADED = task.spawn :: any,
+	PCALL = pcall :: any,
 }
-
--- Connection Class
-
-export type Connection<T...> = {
-	__DataLinker:{[DispatcherMacro<T...>]:Connection<T...>},
-	__Macro:DispatcherMacro<T...>,
-	Disconnect:(self:Connection<T...>)->()
-}
-
-type PrivateConnection = Connection<...any>
-local ConnectionClass = {} :: PrivateConnection & {__index:PrivateConnection}
-ConnectionClass.__index=ConnectionClass
-
-function FuncSignal:CreateConnection<T...>(Macro:DispatcherMacro<T...>,Datalinker:{[DispatcherMacro<T...>]:Connection<T...>})
-	local NewConnection = {
-		__DataLinker=Datalinker,
-		__Macro=Macro
-	}  :: PrivateConnection
-	setmetatable(NewConnection,ConnectionClass)
-	Datalinker[Macro]=(NewConnection :: any)
-	return NewConnection
-end
-
-function ConnectionClass:Disconnect()
-	if self.__DataLinker[self.__Macro] then
-		self.__DataLinker[self.__Macro]=nil
-	end
-	setmetatable(self,nil)
-end
-
 
 -- Proxy Macro
 
@@ -92,10 +63,10 @@ end
 
 function ProxyMacroClass:PushONCEMacro<T...>(Macro)
 	local function OnceMacroWrapper(FNMacro)
-		local OFN : (T...) -> ()
+		local OFN : (T...) -> ()?
 		OFN = function(...)
-			self:RemoveMacro(OFN)
 			FNMacro(...)
+			self:RemoveMacro(OFN :: any)
 		end
 		self.Macros[OFN]=true
 	end
@@ -127,6 +98,7 @@ end
 function ProxyMacroClass:Destroy()
 	if self.ProxyConnection then
 		self.ProxyConnection:Disconnect()
+		self.ProxyConnection=nil :: any
 	end
 	self.Disabled=true
 	self.__LinkedDispatcherHandleFireIntercept=nil
@@ -135,6 +107,31 @@ function ProxyMacroClass:Destroy()
 end
 
 -- Dispatcher Class
+
+-- LIGHT weight (DOD) Connection
+export type Connection<T...> = {
+	Disconnect:(self:Connection<T...>)->(),
+	__Macro:DispatcherMacro<T...>,
+	__Dispatcher:Dispatcher<T...>,
+}
+type PrivateConnection = Connection<...any>
+local ConnectionClass = {} :: PrivateConnection & {__index:PrivateConnection}
+ConnectionClass.__index = ConnectionClass
+
+function ConnectionClass:Disconnect()
+	if self.__Dispatcher then
+		local Connections = self.__Dispatcher.__Connections
+		local Index = table.find(Connections,self)
+		if Index then
+			local CLen = #Connections
+			Connections[Index] = Connections[CLen]
+			Connections[CLen] = nil
+		end
+	end
+	self.__Dispatcher = nil :: any
+	self.__Macro = nil :: any
+	setmetatable(self,nil)
+end
 
 -- (Public) Connections Only --
 export type PublicDispatcher<T...> = {
@@ -146,7 +143,7 @@ export type PublicDispatcher<T...> = {
 }
 
 export type Dispatcher<T...> = {
-	__FunctionBindings:{[DispatcherMacro<T...>]:Connection<T...>},
+	__Connections:{Connection<T...>},
 	Disabled:boolean, -- Stops (ANY) Fire from sending any signal.
 	PublicDispatcher:PublicDispatcher<T...>, -- For Public Connections Only (For Unsafe/Locked Events)
 	-- Fire Methods
@@ -161,6 +158,7 @@ export type Dispatcher<T...> = {
 	FireNative:(self:Dispatcher<T...>,T...)->(boolean), -- Executes immediately on the same thread.
 	FireDeferred:(self:Dispatcher<T...>,T...)->(boolean), -- Executes at the end of the current engine step.
 	FireThreaded:(self:Dispatcher<T...>,T...)->(boolean), -- Wraps each listener in task.spawn.
+	FirePCALL:(self:Dispatcher<T...>,T...)->(boolean), -- Wraps each listener in an pcall for error safety.
 	FireStepped:(self:Dispatcher<T...>,TimeStep:number,T...)->(boolean), -- (FireHardware) but stepped per second
 	-- Connections Methods
 	Connect:(self:Dispatcher<T...>,Macro:DispatcherMacro<T...>)->(Connection<T...>),
@@ -179,10 +177,10 @@ DispatcherClass.__index=DispatcherClass
 
 function FuncSignal:CreateDispatcher<T...>(): Dispatcher<T...>
 	local NewDispatcher = {
-		__FunctionBindings = {},
+		__Connections = {},
 		Disabled=false,
 		PublicDispatcher = (nil :: any)
-	}
+	} :: PrivateDispatcher
 	setmetatable(NewDispatcher,DispatcherClass)
 	-- Public Init --
 	local TDispatcher = NewDispatcher :: Dispatcher<T...>
@@ -196,9 +194,10 @@ function FuncSignal:CreateDispatcher<T...>(): Dispatcher<T...>
 	return NewDispatcher :: Dispatcher<T...>
 end
 
-function DispatcherClass:Connect<T...>(Macro:DispatcherMacro<T...>)
-	local NewConnection = FuncSignal:CreateConnection(Macro,self.__FunctionBindings)
-	return NewConnection
+function DispatcherClass:Connect<T...>(Macro:DispatcherMacro<T...>) : Connection<T...>
+	local Connection = setmetatable({__Macro=Macro,__Dispatcher=self} :: Connection<T...>,ConnectionClass) :: Connection<T...>
+	table.insert(self.__Connections::{Connection<T...>},Connection)
+	return Connection
 end
 
 function DispatcherClass:BatchConnect(Macros)
@@ -233,41 +232,40 @@ function DispatcherClass:HandleFireIntercept(Macro,Header,...)
 		Header(Macro,...)
 	end
 end
-
 function DispatcherClass:MethodFire<T...>(Method,...: T...)
 	if self.Disabled then return false end
 	local Header = FUNCRuntimeHeaders[Method]
-	local FNB = self.__FunctionBindings
-	for Macro in table.clone(self.__FunctionBindings) do
-		if FNB[Macro] then
-			self:HandleFireIntercept(Macro,Header,...)
+	if Method=="HARDWARE" then
+		for Index=#self.__Connections,1,-1 do
+			local Connection = self.__Connections[Index]
+			if Connection then Connection.__Macro(...) end
+		end
+		return true
+	end
+	if self.CustomFireARGSIntercept then
+		for Index=#self.__Connections,1,-1 do
+			local Connection = self.__Connections[Index]
+			if Connection then self:HandleFireIntercept(Connection.__Macro,Header,...) end
+		end
+	else
+		for Index=#self.__Connections,1,-1 do
+			local Connection = self.__Connections[Index]
+			if not Connection then continue end
+			Header(Connection.__Macro,...)
 		end
 	end
-	return true
-end
-function DispatcherClass:FireHardware<T...>(...:T...)
-	if self.Disabled then return false end
-	local Snapshot = table.clone(self.__FunctionBindings)
-	local FNB = self.__FunctionBindings
-	for Macro in Snapshot do
-		if FNB[Macro] then
-			Macro(...)
-		end
-	end
-	table.clear(Snapshot)
+	
 	return true
 end
 function DispatcherClass:FireStepped<T...>(StepTime,...:T...)
 	if self.Disabled then return false end
-	local Snapshot = table.clone(self.__FunctionBindings)
-	local FNB = self.__FunctionBindings
-	for Macro in Snapshot do
-		if FNB[Macro] then
-			Macro(...)
+	for Index=#self.__Connections,1,-1 do
+		local Connection = self.__Connections[Index]
+		if Connection then
+			Connection.__Macro(...)
 			task.wait(StepTime)
 		end
 	end
-	table.clear(Snapshot)
 	return true
 end
 function DispatcherClass:Fire<T...>(...:T...) return self:FireThreaded(...) end
@@ -275,33 +273,37 @@ function DispatcherClass:FireDebug<T...>(...:T...) return self:MethodFire("DEBUG
 function DispatcherClass:FireNative<T...>(...:T...) return self:MethodFire("NATIVE",...) end
 function DispatcherClass:FireDeferred<T...>(...:T...) return self:MethodFire("DEFERRED",...) end
 function DispatcherClass:FireThreaded<T...>(...:T...) return self:MethodFire("THREADED",...) end
-
+function DispatcherClass:FirePCALL<T...>(...:T...) return self:MethodFire("PCALL",...) end
+function DispatcherClass:FireHardware<T...>(...:T...) return self:MethodFire("HARDWARE",...) end
+	
 function DispatcherClass:Once<T...>(Macro)
-	local MacroConnection : PrivateConnection?
+	local Connection : Connection<T...>?
 	local function Action(...:T...)
-		if MacroConnection then
-			MacroConnection:Disconnect()
-			MacroConnection=nil
+		if Connection then
+			Connection:Disconnect()
+			Connection=nil :: any
 		end
 		Macro(...)
 	end
-	MacroConnection = self:Connect(Action)
-	return MacroConnection
+	Connection = self:Connect(Action)
+	return Connection
 end
 
 function DispatcherClass:Wait<T...>()
 	local Thread =  coroutine.running()
 	self:Once(function(...:T...)
-		task.spawn(Thread,...)
+		if coroutine.status(Thread)=="suspended" then
+			task.spawn(Thread,...)
+		end
 	end)
 	return coroutine.yield()
 end
 
 function DispatcherClass:ClearBindings()
-	for _, MacroConnection in self.__FunctionBindings do
-		MacroConnection:Disconnect()
+	for _,Connection in self.__Connections do
+		Connection:Disconnect()
 	end
-	table.clear(self.__FunctionBindings)
+	table.clear(self.__Connections)
 end
 
 function DispatcherClass:SetCustomFireARGSIntercept(Interceptor)
