@@ -225,7 +225,7 @@ return SimpleSignalMonitor
 <a name="gsm"></a>
 # ↗️ Migration Guide: GoodSignal → FuncSignal
 
-If you're moving from **GoodSignal** (Linked List) to **FuncSignal** (DOD Array), the API is designed to be familiar, but the internal "engine" works differently. Follow this guide to swap over without breaking your systems.
+If you're moving from **GoodSignal** (Linked List) to **FuncSignal** (DOD Array), the API is familiar, but the internal "engine" works differently. Follow this guide to swap over without breaking your systems.
 
 ---
 
