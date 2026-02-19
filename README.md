@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/Version-1.2.5-blue" alt="Version">
 </p>
 
-### **FuncSignal** is a production-grade event system for Luau, benchmarked at over **8x faster** (Gets even Faster then that!) than BindableEvents for primitives and up to **26,000x faster** for complex data.BindableEvents.
+### **FuncSignal** is a production-grade event system for Luau, benchmarked at over **8x faster** (Gets even Faster then that!) than BindableEvents for primitives and up to **26,000x faster** for complex data for BindableEvents.
 
 ---
 ## ➡️ Quick Links:
