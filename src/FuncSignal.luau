@@ -481,19 +481,23 @@ function DispatcherClass:Wait<T...>(TimeUntilTimeout,ContinueAfterTimeout,Thread
 	local ContinueAfterTimeout = if ContinueAfterTimeout == nil then false else ContinueAfterTimeout
 	local TimeUntilTimeout = (TimeUntilTimeout or 0)
 	local Timer:thread?
+	local function Run()
+		if coroutine.status(Thread) ~= "suspended" then return end
+		if Threaded then
+			TS(Thread,nil)
+		else
+			TD(Thread,nil)
+		end
+	end
 	if TimeUntilTimeout>0 then
 		Timer=task.delay(TimeUntilTimeout,function()
 			if RS:IsStudio() then
 				warn(`Funcsignal Dispatcher\nWait hit timeout window\n(Waited for {TimeUntilTimeout} Seconds.)`)
 			end
 			if not ContinueAfterTimeout then
-				error("Dispatcher timeout window hit (Waited for {TimeUntilTimeout} Seconds.",3)
+				error(`Dispatcher timeout window hit (Waited for {TimeUntilTimeout} Seconds.`,3)
 			end
-			if Threaded then
-				TS(Thread,nil)
-			else
-				TD(Thread,nil)
-			end
+			Run()
 		end)
 	end
 	self:Once(function(...:T...)
@@ -501,11 +505,7 @@ function DispatcherClass:Wait<T...>(TimeUntilTimeout,ContinueAfterTimeout,Thread
 			task.cancel(Timer)
 			Timer=nil
 		end
-		if Threaded then
-			TS(Thread,...)
-		else
-			TD(Thread,...)
-		end
+		Run()
 	end)
 	return CY()
 end
