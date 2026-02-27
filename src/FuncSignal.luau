@@ -1,7 +1,7 @@
 --!strict
 --!native
 --[[
-    FuncSignal v2.0.0
+    FuncSignal v2.0.1
     Copyright ©️ 2026 classy-dragon
     Licensed under the MIT License.
     See LICENSE file in the github repository for more license information.
@@ -370,7 +370,7 @@ function FuncSignal:CreateDispatcher<T...>(): Dispatcher<T...>
 		DebugTraceStack=nil,
 		Connections=0,
 		__FireMode=0,
-		__Connections = setmetatable({},{__mode="v"}),
+		__Connections = {}, -- setmetatable({},{__mode="v"})
 		__PendingRemovedConnections={},
 		PublicDispatcher = (nil :: any)
 	} :: Dispatcher<T...>
