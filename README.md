@@ -12,6 +12,8 @@
 
 ### **FuncSignal** is a production-grade event system for Luau, benchmarked at over **8x faster** than BindableEvents for primitives and up to **26,000x faster** for complex data. Version 2.0.0 introduces **Parallel Execution**, **Connection Pooling**, and advanced **Fire Filtering**.
 
+## ! This Signal Module is currently being replaced by a new module im working on ! 
+
 ---
 ## ➡️ Quick Links:
 * ⚛️ [Why Should I Use FuncSignal?](#whyfs)
